@@ -1,0 +1,453 @@
+
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备电压监控</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: url('./images/dianliu.png') no-repeat center center fixed;
+            background-size: cover;
+            color: #d3d4d8;
+        }
+        .container {
+            min-height: 100vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(40, 43, 49, 0.7);
+        }
+        .content {
+            position: relative;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            color: #4fb3ff;
+        }
+        #chart {
+            width: 100%;
+            height: 400px;
+        }
+        .pagination, .peak-voltage {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .pagination button, .peak-voltage button {
+            background-color: #4fb3ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 5px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .pagination button.disabled {
+            background-color: #4fb3ff;
+            cursor: pointer;
+        }
+        .peak-voltage select {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #4fb3ff;
+            color: #4fb3ff;
+            background-color: #282b31;
+            margin: 0 5px;
+            width: 200px; /* 控制宽度 */
+            height: 40px; /* 控制默认高度 */
+            overflow-y: auto; /* 添加滚动条 */
+        }
+
+        .peak-display {
+            display: inline-block;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #4fb3ff;
+            color: #4fb3ff;
+            background-color: #282b31;
+            margin: 5px 0;
+            width: 220px;
+            text-align: left;
+        }
+        .peak-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <div class="header">
+                <h1>设备电压监控</h1>
+            </div>
+            <div id="chart"></div>
+            <div class="pagination">
+                <button id="prev-button" class="disabled">上一页</button>
+                <button id="next-button">下一页</button>
+            </div>
+            <div class="peak-voltage">
+                <select id="device-select" multiple>
+                    <option value="" disabled>选择设备</option>
+                </select>
+                <button id="show-selected-devices">显示选定设备曲线</button>
+                <button id="single-device-peak-button">查询选定设备峰值电压</button>
+                <button id="all-devices-peak-button">查询所有设备峰值电压</button>
+            </div>
+            <div class="peak-container">
+                <div id="peak-display" class="peak-display">
+                    <strong>峰值电压:</strong><br>
+                    外部: N/A V<br>
+                    内部: N/A V
+                </div>
+                <div id="all-devices-peak" class="peak-display">
+                    <strong>所有设备峰值:</strong><br>
+                    设备号: N/A<br>
+                    外部峰值电压: N/A V<br>
+                    内部峰值电压: N/A V
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let token = '';
+        const devices = [];
+        const pageSize = 2;
+        let currentPage = 0;
+        let totalDevices = 0;
+        let voltageData = [];
+        let timeData = [];
+
+        // 初始化图表
+        const chart = echarts.init(document.getElementById('chart'));
+
+        async function init() {
+            await loginAndFetchToken('luopeng', '123456a');
+        }
+
+        async function loginAndFetchToken(username, password) {
+            const loginUrl = 'http://dfyun.tuech.cn:2023/api.info/gettoken';
+
+            try {
+                const response = await fetch(loginUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user: username,
+                        pwd: password
+                    })
+                });
+
+                const data = await response.json();
+                if (data.status === 1) {
+                    token = data.Data.token;
+                    await fetchProjectInfo();
+                } else {
+                    alert(`登录失败: ${data.mess}`);
+                }
+            } catch (error) {
+                console.error('登录失败:', error);
+                alert('登录失败');
+            }
+        }
+
+        async function fetchProjectInfo() {
+            try {
+                const response = await fetch('http://dfyun.tuech.cn:2023/api.info/getproinfo', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'token': token
+                    }
+                });
+
+                const data = await response.json();
+                if (data.status === 1) {
+                    data.Data.forEach(project => {
+                        project.imei.forEach(device => {
+                            devices.push(device);
+                        });
+                    });
+                    totalDevices = devices.length;
+                    populateDeviceSelect();
+                    await fetchAndDisplayData();
+                } else {
+                    alert(`获取项目信息失败: ${data.mess}`);
+                }
+            } catch (error) {
+                console.error('获取项目信息失败:', error);
+                alert('获取项目信息失败');
+            }
+        }
+
+        function populateDeviceSelect() {
+            const deviceSelect = document.getElementById('device-select');
+            devices.forEach(device => {
+                const option = document.createElement('option');
+                option.value = device.imei;
+                option.text = `设备 ${device.imei}`;
+                deviceSelect.add(option);
+            });
+        }
+
+        async function fetchAndDisplayData() {
+            const start = currentPage * pageSize;
+            const end = start + pageSize;
+            const currentDevices = devices.slice(start, end);
+            const promises = currentDevices.map(device => fetchHistoryData(device));
+
+            try {
+                const dataArray = await Promise.all(promises);
+                processChartData(dataArray, currentDevices);
+                updateChart();
+                updatePaginationButtons();
+            } catch (error) {
+                console.error('获取历史数据失败:', error);
+            }
+        }
+
+        async function fetchAndDisplayDataForDevices(selectedDevices) {
+            const promises = selectedDevices.map(device => fetchHistoryData(device));
+
+            try {
+                const dataArray = await Promise.all(promises);
+                processChartData(dataArray, selectedDevices);
+                updateChart();
+            } catch (error) {
+                console.error('获取设备历史数据失败:', error);
+            }
+        }
+
+        async function fetchHistoryData(device, limit = 10) {
+            const historyInfoUrl = `http://dfyun.tuech.cn:2023/api.info/getimeihistory?imei=${device.imei}&page=1&limit=${limit}`;
+
+            try {
+                const response = await fetch(historyInfoUrl, {
+                    method: 'GET',
+                    headers: {
+                        'token': token
+                    }
+                });
+                const data = await response.json();
+                if (data.status === 1) {
+                    return data.Data.imeihistory;
+                } else {
+                    throw new Error(`设备 ${device.imei}: ${data.mess}`);
+                }
+            } catch (error) {
+                console.error('获取设备历史数据失败:', error);
+                throw error;
+            }
+        }
+
+        function processChartData(dataArray, currentDevices) {
+            voltageData = [];
+            timeData = dataArray[0].map(entry => entry.imei_updatetime);
+
+            dataArray.forEach((data, index) => {
+                const externalVoltages = data.map(entry => parseFloat(entry.imei_volt));
+                const internalVoltages = data.map(entry => parseFloat(entry.imei_batt));
+
+                voltageData.push({
+                    name: `${currentDevices[index].imei} 外部电压`,
+                    type: 'line',
+                    data: externalVoltages,
+                    smooth: true
+                });
+
+                voltageData.push({
+                    name: `${currentDevices[index].imei} 内部电压`,
+                    type: 'line',
+                    data: internalVoltages,
+                    smooth: true
+                });
+            });
+        }
+
+        function updateChart() {
+            chart.setOption({
+                tooltip: {
+                    trigger: 'axis'
+                },
+                legend: {
+                    data: voltageData.map(s => s.name),
+                    textStyle: {
+                        color: '#d3d4d8'
+                    }
+                },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: timeData,
+                    axisLabel: {
+                        color: '#d3d4d8'
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    min: 3,
+                    max: 14,
+                    axisLabel: {
+                        color: '#d3d4d8'
+                    }
+                },
+                series: voltageData
+            });
+        }
+
+        function updatePaginationButtons() {
+            document.getElementById('prev-button').disabled = currentPage === 0;
+            document.getElementById('next-button').disabled = currentPage >= Math.floor((totalDevices - 1) / pageSize);
+        }
+
+        document.getElementById('prev-button').addEventListener('click', () => {
+            if (currentPage > 0) {
+                currentPage--;
+                fetchAndDisplayData();
+            }
+        });
+
+        document.getElementById('next-button').addEventListener('click', () => {
+            if (currentPage < Math.floor((totalDevices - 1) / pageSize)) {
+                currentPage++;
+                fetchAndDisplayData();
+            }
+        });
+
+        // 显示选定设备的曲线
+        document.getElementById('show-selected-devices').addEventListener('click', () => {
+            const deviceSelect = document.getElementById('device-select');
+            const selectedImeis = Array.from(deviceSelect.selectedOptions).map(option => option.value);
+            const selectedDevices = devices.filter(device => selectedImeis.includes(device.imei));
+            fetchAndDisplayDataForDevices(selectedDevices);
+        });
+
+        // 查询峰值电压的功能
+        document.getElementById('single-device-peak-button').addEventListener('click', async () => {
+            const selectedDeviceImei = document.getElementById('device-select').value;
+            if (selectedDeviceImei) {
+                const selectedDevice = devices.find(device => device.imei === selectedDeviceImei);
+                await fetchPeakVoltageForDevice(selectedDevice);
+            } else {
+                alert('请先选择一个设备');
+            }
+        });
+
+        document.getElementById('all-devices-peak-button').addEventListener('click', async () => {
+            await fetchPeakVoltageForAllDevices();
+        });
+
+        async function fetchPeakVoltageForDevice(device) {
+            try {
+                const data = await fetchHistoryData(device, 500);
+                let peakExternalVoltage = 0;
+                let peakInternalVoltage = 0;
+
+                data.forEach(entry => {
+                    const externalVoltage = parseFloat(entry.imei_volt);
+                    const internalVoltage = parseFloat(entry.imei_batt);
+
+                    if (externalVoltage > peakExternalVoltage) {
+                        peakExternalVoltage = externalVoltage;
+                    }
+                    if (internalVoltage > peakInternalVoltage) {
+                        peakInternalVoltage = internalVoltage;
+                    }
+                });
+
+                displayPeakVoltage(peakExternalVoltage, peakInternalVoltage);
+            } catch (error) {
+                console.error('获取设备历史数据失败:', error);
+            }
+        }
+
+        async function fetchPeakVoltageForAllDevices() {
+            const promises = devices.map(device => fetchHistoryData(device, 500));
+
+            try {
+                const results = await Promise.allSettled(promises);
+                let overallPeakExternalVoltage = 0;
+                let overallPeakInternalVoltage = 0;
+                let peakDeviceImei = '';
+
+                results.forEach((result, index) => {
+                    if (result.status === 'fulfilled') {
+                        const data = result.value;
+                        let peakExternalVoltage = 0;
+                        let peakInternalVoltage = 0;
+
+                        data.forEach(entry => {
+                            const externalVoltage = parseFloat(entry.imei_volt);
+                            const internalVoltage = parseFloat(entry.imei_batt);
+
+                            if (externalVoltage > peakExternalVoltage) {
+                                peakExternalVoltage = externalVoltage;
+                            }
+                            if (internalVoltage > peakInternalVoltage) {
+                                peakInternalVoltage = internalVoltage;
+                            }
+                        });
+
+                        console.log(`设备 ${devices[index].imei}: 外部峰值电压 = ${peakExternalVoltage} V, 内部峰值电压 = ${peakInternalVoltage} V`);
+
+                        if (peakExternalVoltage > overallPeakExternalVoltage || peakInternalVoltage > overallPeakInternalVoltage) {
+                            overallPeakExternalVoltage = peakExternalVoltage;
+                            overallPeakInternalVoltage = peakInternalVoltage;
+                            peakDeviceImei = devices[index].imei;
+                        }
+                    } else {
+                        console.error(`获取设备 ${devices[index].imei} 数据失败: ${result.reason}`);
+                    }
+                });
+
+                displayPeakVoltage(overallPeakExternalVoltage, overallPeakInternalVoltage);
+                displayAllDevicesPeak(peakDeviceImei, overallPeakExternalVoltage, overallPeakInternalVoltage);
+            } catch (error) {
+                console.error('获取所有设备历史数据失败:', error);
+            }
+        }
+
+        function displayPeakVoltage(external, internal) {
+            const peakDisplay = document.getElementById('peak-display');
+            peakDisplay.innerHTML = `
+                <strong>峰值电压:</strong><br>
+                外部: ${external} V<br>
+                内部: ${internal} V
+            `;
+        }
+
+        function displayAllDevicesPeak(imei, external, internal) {
+            const allDevicesPeakDisplay = document.getElementById('all-devices-peak');
+            allDevicesPeakDisplay.innerHTML = `
+                <strong>所有设备峰值:</strong><br>
+                设备号: ${imei}<br>
+                外部峰值电压: ${external} V<br>
+                内部峰值电压: ${internal} V
+            `;
+        }
+
+        init();
+    </script>
+</body>
+</html>
+
+

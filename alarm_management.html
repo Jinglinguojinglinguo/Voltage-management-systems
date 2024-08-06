@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报警管理</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #14161A;
+            color: #d3d4d8;
+        }
+        .container {
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            color: #4fb3ff;
+        }
+        .search-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .search-container input {
+            padding: 10px;
+            margin-right: 10px;
+            width: 200px;
+            border: none;
+            border-radius: 5px;
+            outline: none;
+            font-size: 1em;
+            background-color: #333;
+            color: #fff;
+        }
+        .search-container button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4fb3ff;
+            color: #fff;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table, th, td {
+            border: 1px solid #333;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #1f2125;
+            color: #4fb3ff;
+        }
+        tbody tr:nth-child(odd) {
+            background-color: #1f2125;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #2a2d34;
+        }
+        tbody tr:hover {
+            background-color: #333940;
+            cursor: pointer;
+        }
+        tbody tr.unhandled {
+            background-color: #8B0000; /* Red for unhandled */
+        }
+        tbody tr.processing {
+            background-color: #8cc302; /* Yellow for processing */
+        }
+        tbody tr.handled {
+            background-color: #228B22; /* Green for handled */
+        }
+        .pagination {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .pagination button {
+            padding: 10px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4fb3ff;
+            color: #fff;
+            cursor: pointer;
+        }
+        .pagination button.disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal-content {
+            background-color: #14161A;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+        }
+        .modal-content h2 {
+            color: #4fb3ff;
+        }
+        .modal-content p {
+            margin: 10px 0;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .notification-options {
+            display: flex;
+            justify-content: space-around;
+            margin: 10px 0;
+        }
+        .notification-options button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4fb3ff;
+            color: #fff;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        .notification-options button.disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+        .sending-notification {
+            text-align: center;
+            margin: 10px 0;
+            color: #FFD700;
+        }
+        .notification-success {
+            text-align: center;
+            margin: 10px 0;
+            color: #228B22;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>报警管理</h1>
+        </div>
+        <div class="search-container">
+            <input type="text" id="search-device-id" placeholder="设备ID">
+            <input type="text" id="search-alarm-type" placeholder="报警类型">
+            <button onclick="search()">查询</button>
+        </div>
+        <table id="alarm-table">
+            <thead>
+                <tr>
+                    <th>报警ID</th>
+                    <th>设备ID</th>
+                    <th>报警类型</th>
+                    <th>报警时间</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="alarm-body">
+                <!-- 动态填充报警信息 -->
+            </tbody>
+        </table>
+        <div class="pagination" id="pagination">
+            <button id="prev-page" onclick="prevPage()">上一页</button>
+            <button id="next-page" onclick="nextPage()">下一页</button>
+        </div>
+    </div>
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>设备详情</h2>
+            <p id="device-details"></p>
+            <div class="notification-options" id="notification-options">
+                <button onclick="sendNotification('邮件')">邮件</button>
+                <button onclick="sendNotification('短信')">短信</button>
+                <button onclick="sendNotification('微信')">微信</button>
+            </div>
+            <p class="sending-notification" id="sending-notification" style="display: none;">正在发送...</p>
+            <p class="notification-success" id="notification-success" style="display: none;">发送成功</p>
+        </div>
+    </div>
+    <script>
+        const alarms = [];
+        let alarmId = 1;
+        const alarmsPerPage = 10;
+        let currentPage = 1;
+        let token = '';
+        const devices = [];
+
+        async function loginAndFetchDevices() {
+            const username = "luopeng";
+            const password = "123456a";
+            const loginUrl = 'http://dfyun.tuech.cn:2023/api.info/gettoken';
+
+            try {
+                const response = await fetch(loginUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user: username,
+                        pwd: password
+                    })
+                });
+
+                const data = await response.json();
+                if (data.status === 1) {
+                    token = data.Data.token;
+                    await fetchDeviceData();
+                } else {
+                    alert(`登录失败: ${data.mess}`);
+                }
+            } catch (error) {
+                console.error('登录失败:', error);
+                alert('登录失败');
+            }
+        }
+
+        async function fetchDeviceData() {
+            const deviceInfoUrl = 'http://dfyun.tuech.cn:2023/api.info/getproinfo';
+
+            try {
+                const response = await fetch(deviceInfoUrl, {
+                    method: 'GET',
+                    headers: {
+                        'token': token
+                    }
+                });
+
+                const data = await response.json();
+                if (data.status === 1) {
+                    const currentTime = new Date().toLocaleString();
+                    data.Data.forEach(project => {
+                        project.imei.forEach(device => {
+                            devices.push({
+                                deviceId: device.imei,
+                                creationDate: project.create_time,
+                                location: project.latlon,
+                                externalVoltage: parseFloat(device.imei_volt),
+                                internalVoltage: parseFloat(device.imei_batt)
+                            });
+                            generateAlarms(device, currentTime);
+                        });
+                    });
+                    filteredAlarms = alarms;
+                    renderTable(filteredAlarms);
+                    updatePaginationButtons(filteredAlarms);
+                } else {
+                    alert(`获取设备信息失败: ${data.mess}`);
+                }
+            } catch (error) {
+                console.error('获取设备信息失败:', error);
+                alert('获取设备信息失败');
+            }
+        }
+
+        function generateAlarms(device, alarmTime) {
+            const imei = device.imei;
+            const externalVoltage = parseFloat(device.imei_volt);
+            const internalVoltage = parseFloat(device.imei_batt);
+
+            if (externalVoltage < 11.5) {
+                alarms.push(createAlarm(imei, '外部电压低压预警', alarmTime));
+            } else if (externalVoltage > 13) {
+                alarms.push(createAlarm(imei, '外部电压高压预警', alarmTime));
+            }
+
+            if (internalVoltage < 4.1) {
+                alarms.push(createAlarm(imei, '内部电压低压预警', alarmTime));
+            } else if (internalVoltage > 4.2) {
+                alarms.push(createAlarm(imei, '内部电压高压预警', alarmTime));
+            }
+        }
+
+        function createAlarm(deviceId, alarmType, alarmTime) {
+            return {
+                alarmId: alarmId++,
+                deviceId,
+                alarmType,
+                alarmTime,
+                status: getStatus()
+            };
+        }
+
+        function getStatus() {
+            const statuses = ['未处理', '正在处理', '已处理'];
+            return statuses[Math.floor(Math.random() * statuses.length)];
+        }
+
+        function renderTable(alarmList) {
+            const tableBody = document.getElementById('alarm-body');
+            tableBody.innerHTML = '';
+            const start = (currentPage - 1) * alarmsPerPage;
+            const end = start + alarmsPerPage;
+            const currentAlarms = alarmList.slice(start, end);
+
+            currentAlarms.forEach(alarm => {
+                const row = document.createElement('tr');
+                row.className = alarm.status === '未处理' ? 'unhandled' :
+                                alarm.status === '正在处理' ? 'processing' :
+                                'handled';
+                row.innerHTML = `
+                    <td>${alarm.alarmId}</td>
+                    <td>${alarm.deviceId}</td>
+                    <td>${alarm.alarmType}</td>
+                    <td>${alarm.alarmTime}</td>
+                    <td>${alarm.status}</td>
+                    <td><button onclick="viewDetails('${alarm.deviceId}', '${alarm.status}')">查看详情</button></td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function updatePaginationButtons(alarmList) {
+            const totalPages = Math.ceil(alarmList.length / alarmsPerPage);
+            document.getElementById('prev-page').disabled = currentPage === 1;
+            document.getElementById('next-page').disabled = currentPage === totalPages;
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderTable(filteredAlarms);
+                updatePaginationButtons(filteredAlarms);
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(filteredAlarms.length / alarmsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderTable(filteredAlarms);
+                updatePaginationButtons(filteredAlarms);
+            }
+        }
+
+        let filteredAlarms = [];
+
+        function search() {
+            const deviceId = document.getElementById('search-device-id').value.toLowerCase();
+            const alarmType = document.getElementById('search-alarm-type').value.toLowerCase();
+
+            filteredAlarms = alarms.filter(alarm => 
+                (!deviceId || alarm.deviceId.toLowerCase().includes(deviceId)) &&
+                (!alarmType || alarm.alarmType.toLowerCase().includes(alarmType))
+            );
+
+            currentPage = 1;
+            renderTable(filteredAlarms);
+            updatePaginationButtons(filteredAlarms);
+        }
+
+        function viewDetails(deviceId, status) {
+            const device = devices.find(d => d.deviceId === deviceId);
+            if (device) {
+                document.getElementById('device-details').innerHTML = `
+                    <p><strong>设备ID:</strong> ${device.deviceId}</p>
+                    <p><strong>设备创建时间:</strong> ${device.creationDate}</p>
+                    <p><strong>设备位置:</strong> ${device.location}</p>
+                    <p><strong>外部电压:</strong> ${device.externalVoltage} V</p>
+                    <p><strong>内部电压:</strong> ${device.internalVoltage} V</p>
+                    ${status === '未处理' ? '<button onclick="showNotificationOptions()">通知维修</button>' : ''}
+                `;
+                document.getElementById('detailModal').style.display = 'block';
+            }
+        }
+
+        function showNotificationOptions() {
+            document.getElementById('notification-options').style.display = 'flex';
+        }
+
+        function sendNotification(method) {
+            document.getElementById('notification-options').style.display = 'none';
+            document.getElementById('sending-notification').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('sending-notification').style.display = 'none';
+                document.getElementById('notification-success').innerText = `通过${method}发送成功`;
+                document.getElementById('notification-success').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('notification-success').style.display = 'none';
+                }, 3000);
+            }, 3000);
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        loginAndFetchDevices();
+    </script>
+</body>
+</html>

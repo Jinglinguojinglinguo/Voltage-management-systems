@@ -1,0 +1,151 @@
+<!-- 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Data Fetch Example</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Data Fetch Example</h1>
+    <div>
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+    </div>
+    <div id="project-info" style="display: none;">
+        <h2>Project Info</h2>
+        <div id="data-container">Loading data...</div>
+        <h3>Get History Info</h3>
+        <input type="text" id="imei" placeholder="IMEI" value="863313063468428">
+        <input type="number" id="page" placeholder="Page" value="1">
+        <input type="number" id="limit" placeholder="Limit" value="10">
+        <button onclick="getHistoryInfo()">Get History Info</button>
+        <button onclick="getDeviceDetails()">Get Device Details</button>
+        <button onclick="getDeviceSensorInfo()">Get Device Sensor Info</button>
+        <div id="history-container" style="display: none;">
+            <h2>History Info</h2>
+            <div id="history-data">Loading history data...</div>
+            <div id="history-pagination" style="display: none;">
+                <button onclick="previousPage()">Previous Page</button>
+                <button onclick="nextPage()">Next Page</button>
+                <span id="page-info"></span>
+            </div>
+        </div>
+        <div id="details-container">
+            <h2>Device Details</h2>
+            <div id="details-data">Loading device details...</div>
+        </div>
+        <div id="sensor-container">
+            <h2>Device Sensor Info</h2>
+            <div id="sensor-data">Loading sensor data...</div>
+        </div>
+        <div>
+            <h3>Get Latest Sensor Data</h3>
+            <input type="text" id="sDataTable" placeholder="Sensor Name">
+            <input type="text" id="type" placeholder="Type (1, 2, or 4)">
+            <button onclick="getLatestSensorData()">Get Latest Sensor Data</button>
+        </div>
+        <div id="latest-sensor-container">
+            <h2>Latest Sensor Data</h2>
+            <div id="latest-sensor-data">Loading latest sensor data...</div>
+        </div>
+    </div>
+    <script src="./js/script.js"></script>
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API数据获取示例</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>API数据获取示例</h1>
+    <div>
+        <h2>登录</h2>
+        <input type="text" id="username" placeholder="用户名">
+        <input type="password" id="password" placeholder="密码">
+        <button onclick="login()">登录</button>
+    </div>
+    <div id="project-info" style="display: none;">
+        <h2>项目信息</h2>
+        <div id="data-container">正在加载数据...</div>
+        <h3>获取历史信息</h3>
+        <input type="text" id="imei" placeholder="IMEI" value="863313063468428">
+        <input type="number" id="page" placeholder="页码" value="1">
+        <input type="number" id="limit" placeholder="限制" value="10">
+        <button onclick="getHistoryInfo()">获取历史信息</button>
+        <button onclick="getDeviceDetails()">获取设备详情</button>
+        <button onclick="getDeviceSensorInfo()">获取设备传感器信息</button>
+        <div id="history-container" style="display: none;">
+            <h2>历史信息</h2>
+            <div id="history-data">正在加载历史数据...</div>
+            <div id="history-pagination" style="display: none;">
+                <button onclick="previousPage()">上一页</button>
+                <button onclick="nextPage()">下一页</button>
+                <span id="page-info"></span>
+            </div>
+        </div>
+        <div id="details-container">
+            <h2>设备详情</h2>
+            <div id="details-data">正在加载设备详情...</div>
+        </div>
+        <div id="sensor-container">
+            <h2>设备传感器信息</h2>
+            <div id="sensor-data">正在加载传感器数据...</div>
+        </div>
+        <div>
+            <h3>获取最新传感器数据</h3>
+            <input type="text" id="sDataTable" placeholder="传感器名称">
+            <input type="text" id="type" placeholder="类型 (1, 2, 或 4)">
+            <button onclick="getLatestSensorData()">获取最新传感器数据</button>
+        </div>
+        <div id="latest-sensor-container">
+            <h2>最新传感器数据</h2>
+            <div id="latest-sensor-data">正在加载最新传感器数据...</div>
+        </div>
+    </div>
+    <script src="./js/script.js"></script>
+</body>
+</html>

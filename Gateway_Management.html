@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备详情</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: url('./images/4.png') no-repeat center center fixed;
+            background-size: cover;
+            color: #dce0ec;
+            position: relative;
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.1);
+            z-index: 1;
+        }
+        .container {
+            position: relative;
+            z-index: 2;
+            width: 90%;
+            margin: auto;
+            overflow: hidden;
+            padding-top: 30px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            color: #4fb3ff;
+        }
+        .search-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .search-container input {
+            padding: 10px;
+            margin-right: 10px;
+            width: 200px;
+            border: none;
+            border-radius: 5px;
+            outline: none;
+            font-size: 1em;
+            background-color: #333;
+            color: #fff;
+        }
+        .search-container button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4fb3ff;
+            color: #fff;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table, th, td {
+            border: 1px solid #333;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #2a2e38;
+        }
+        tbody tr:nth-child(odd) {
+            background-color: #2a2e38;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #23262e;
+        }
+        tbody tr:hover {
+            background-color: #3a3e48;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <div class="container">
+        <div class="header">
+            <h1>设备详情</h1>
+        </div>
+        <div class="search-container">
+            <input type="text" id="search-query" placeholder="搜索 (IMEI, 软件名, ICCID)">
+            <button onclick="searchDevices()">搜索</button>
+        </div>
+        <table id="device-details-table">
+            <thead>
+                <tr>
+                    <th>IMEI号码</th>
+                    <th>软件名称</th>
+                    <th>最新上传时间</th>
+                    <th>物联网卡号</th>
+                    <th>设备运行总时间</th>
+                    <th>开机状态</th>
+                    <th>软件版本</th>
+                    <th>外部电压</th>
+                    <th>开机次数</th>
+                    <th>信号强度</th>
+                    <th>软件版本号</th>
+                </tr>
+            </thead>
+            <tbody id="device-details-body">
+                <!-- 动态填充设备信息 -->
+            </tbody>
+        </table>
+    </div>
+    <script>
+        let token = '';
+        let imeis = [];
+        let allDevices = []; // Store all devices for search filtering
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const username = "luopeng";
+            const password = "123456a";
+            login(username, password);
+        });
+
+        // 用户登录函数
+        function login(username, password) {
+            const loginUrl = 'http://dfyun.tuech.cn:2023/api.info/gettoken';
+
+            fetch(loginUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user: username,
+                    pwd: password
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('登录响应数据:', data);
+                if (data.status === 1) {
+                    token = data.Data.token;
+                    getDeviceList();
+                } else {
+                    alert(data.mess);
+                }
+            })
+            .catch(error => {
+                console.error('登录错误:', error);
+                alert('登录失败');
+            });
+        }
+
+        // 获取设备信息
+        function getDeviceList() {
+            const projectInfoUrl = 'http://dfyun.tuech.cn:2023/api.info/getproinfo';
+
+            fetch(projectInfoUrl, {
+                method: 'GET',
+                headers: {
+                    token
+                }
+            })
+            .then(response => {
+                console.log('响应状态:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP错误! 状态: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('设备信息响应数据:', data);
+                if (data.status === 1) {
+                    imeis = data.Data.flatMap(project => project.imei.map(device => device.imei));
+                    fetchAllDeviceDetails();
+                } else {
+                    alert(data.mess);
+                }
+            })
+            .catch(error => {
+                console.error('获取设备信息错误:', error);
+                alert('获取设备信息失败');
+            });
+        }
+
+        // 获取所有设备详情
+        function fetchAllDeviceDetails() {
+            imeis.forEach(imei => {
+                fetchDeviceDetails(imei);
+            });
+        }
+
+        // 获取单个设备详情
+        function fetchDeviceDetails(imei) {
+            const detailsUrl = `http://dfyun.tuech.cn:2023/api.info/getimeidetails?imei=${imei}`;
+
+            fetch(detailsUrl, {
+                method: 'GET',
+                headers: {
+                    token
+                }
+            })
+            .then(response => {
+                console.log('响应状态:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP错误! 状态: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('设备详情响应数据:', data);
+                if (data.status === 1) {
+                    const device = data.Data.imeidetails;
+                    allDevices.push(device);
+                    renderDeviceDetails(allDevices);
+                } else {
+                    alert(data.mess);
+                }
+            })
+            .catch(error => {
+                console.error('获取设备详情错误:', error);
+                alert('获取设备详情失败');
+            });
+        }
+
+        // 渲染设备详情
+        function renderDeviceDetails(deviceList) {
+            const tableBody = document.getElementById('device-details-body');
+            tableBody.innerHTML = '';
+
+            deviceList.forEach(device => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td onclick="viewDeviceHistory('${device.imei}')">${device.imei}</td>
+                    <td>${device.imei_appname}</td>
+                    <td>${device.imei_updatetime}</td>
+                    <td>${device.imei_iccid}</td>
+                    <td>${device.imei_runtime} h</td>
+                    <td>${device.imei_startreason === "0" ? "电源开机" : "电源关机"}</td>
+                    <td>${device.imei_appver}</td>
+                    <td>${device.imei_volt} V</td>
+                    <td>${device.imei_startnum}</td>
+                    <td>${device.imei_rssi}</td>
+                    <td>${device.imei_osver}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // 搜索设备
+        function searchDevices() {
+            const query = document.getElementById('search-query').value.toLowerCase();
+            const filteredDevices = allDevices.filter(device => 
+                device.imei.toLowerCase().includes(query) ||
+                (device.imei_appname && device.imei_appname.toLowerCase().includes(query)) ||
+                (device.imei_iccid && device.imei_iccid.toLowerCase().includes(query))
+            );
+            renderDeviceDetails(filteredDevices);
+        }
+
+        // 查看设备历史信息
+        function viewDeviceHistory(imei) {
+            localStorage.setItem('selectedImei', imei);
+            window.location.href = 'details.html';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报警设置</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #14161A;
+            color: #d3d4d8;
+        }
+        .container {
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            color: #4fb3ff;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #333;
+            color: #fff;
+            font-size: 1em;
+        }
+        .form-group select {
+            padding: 10px;
+            background-color: #333;
+            color: #fff;
+        }
+        .form-group button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4fb3ff;
+            color: #fff;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        .settings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .settings-table, th, td {
+            border: 1px solid #333;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #1f2125;
+            color: #4fb3ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>报警设置</h1>
+        </div>
+        <div class="form-group">
+            <label for="lower-threshold">电压下限阈值 (V)</label>
+            <input type="number" id="lower-threshold" placeholder="输入电压下限阈值">
+        </div>
+        <div class="form-group">
+            <label for="upper-threshold">电压上限阈值 (V)</label>
+            <input type="number" id="upper-threshold" placeholder="输入电压上限阈值">
+        </div>
+        <div class="form-group">
+            <label for="notification-method">报警通知方式</label>
+            <select id="notification-method">
+                <option value="email">邮件</option>
+                <option value="sms">短信</option>
+                <option value="both">邮件和短信</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="alarm-level">报警等级</label>
+            <select id="alarm-level">
+                <option value="normal">正常</option>
+                <option value="level1">一级报警</option>
+                <option value="level2">二级报警</option>
+                <option value="level3">三级报警</option>
+                <option value="level4">四级报警</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <button onclick="saveSettings()">保存设置</button>
+            <button onclick="resetSettings()">重置设置</button>
+        </div>
+        <h2>当前设置</h2>
+        <table class="settings-table">
+            <thead>
+                <tr>
+                    <th>设置项</th>
+                    <th>值</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>电压下限阈值 (V)</td>
+                    <td id="current-lower-threshold"></td>
+                </tr>
+                <tr>
+                    <td>电压上限阈值 (V)</td>
+                    <td id="current-upper-threshold"></td>
+                </tr>
+                <tr>
+                    <td>报警通知方式</td>
+                    <td id="current-notification-method"></td>
+                </tr>
+                <tr>
+                    <td>报警等级</td>
+                    <td id="current-alarm-level"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <script>
+        function saveSettings() {
+            const lowerThreshold = document.getElementById('lower-threshold').value;
+            const upperThreshold = document.getElementById('upper-threshold').value;
+            const notificationMethod = document.getElementById('notification-method').value;
+            const alarmLevel = document.getElementById('alarm-level').value;
+
+            localStorage.setItem('lowerThreshold', lowerThreshold);
+            localStorage.setItem('upperThreshold', upperThreshold);
+            localStorage.setItem('notificationMethod', notificationMethod);
+            localStorage.setItem('alarmLevel', alarmLevel);
+
+            updateCurrentSettings();
+        }
+
+        function resetSettings() {
+            document.getElementById('lower-threshold').value = '';
+            document.getElementById('upper-threshold').value = '';
+            document.getElementById('notification-method').value = 'email';
+            document.getElementById('alarm-level').value = 'normal';
+        }
+
+        function updateCurrentSettings() {
+            document.getElementById('current-lower-threshold').innerText = localStorage.getItem('lowerThreshold') || '';
+            document.getElementById('current-upper-threshold').innerText = localStorage.getItem('upperThreshold') || '';
+            document.getElementById('current-notification-method').innerText = localStorage.getItem('notificationMethod') || '邮件';
+            document.getElementById('current-alarm-level').innerText = localStorage.getItem('alarmLevel') || '正常';
+        }
+
+        document.addEventListener('DOMContentLoaded', updateCurrentSettings);
+    </script>
+</body>
+</html>

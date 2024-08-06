@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备管理界面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: url('./images/7.png');
+            background-size: cover;
+            background-position: center;
+            color: #ffffff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .form-group button {
+            display: inline-block;
+            padding: 10px 15px;
+            margin-right: 10px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .form-group button.delete {
+            background-color: #dc3545;
+        }
+        .form-group button.export {
+            background-color: #007bff;
+        }
+        .device-list {
+            margin-top: 20px;
+        }
+        .device-item {
+            background-color: #333;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .device-item span {
+            flex-grow: 1;
+        }
+        .device-item button {
+            margin-left: 10px;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .pagination button {
+            padding: 10px 15px;
+            margin: 0 5px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .form-group input.search {
+            width: calc(100% - 120px);
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>设备管理界面</h1>
+        <div class="form-group">
+            <label for="device-type">设备类型</label>
+            <select id="device-type">
+                <option value="温度传感器">温度传感器</option>
+                <option value="湿度传感器">湿度传感器</option>
+                <option value="气压传感器">气压传感器</option>
+                <option value="风速传感器">风速传感器</option>
+                <option value="风向传感器">风向传感器</option>
+                <option value="雨量传感器">雨量传感器</option>
+                <option value="物候传感器">物候传感器</option>
+                <option value="光照度传感器">光照度传感器</option>
+                <option value="辐射传感器">辐射传感器</option>
+                <option value="可燃物温度传感器">可燃物温度传感器</option>
+                <option value="可燃物含水率传感器">可燃物含水率传感器</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="device-id">设备编号（15位数字）</label>
+            <input type="text" id="device-id" maxlength="15">
+        </div>
+        <div class="form-group">
+            <button id="add-device">添加设备</button>
+            <button class="export" id="export-devices">导出设备列表</button>
+        </div>
+        <div class="form-group">
+            <input type="text" id="search-bar" class="search" placeholder="搜索设备编号">
+            <button id="search-device">搜索</button>
+        </div>
+        <div class="device-list" id="device-list">
+            <!-- Devices will be listed here -->
+        </div>
+        <div class="pagination" id="pagination">
+            <!-- Pagination buttons will be added here -->
+        </div>
+    </div>
+
+    <script>
+        let devices = [];
+        const devicesPerPage = 10;
+        let currentPage = 1;
+        const deviceTypes = [
+            "温度传感器", "湿度传感器", "气压传感器",
+            "风速传感器", "风向传感器", "雨量传感器",
+            "物候传感器", "光照度传感器", "辐射传感器",
+            "可燃物温度传感器", "可燃物含水率传感器"
+        ];
+
+        // Specific device IDs provided
+        const deviceIds = [
+            "863313063468196", "863313063472370", "863313063468428",
+            "863313063468469", "863313063468501", "863313063468246",
+            "863313063468907", "863313062835171"
+        ];
+
+        window.onload = function() {
+            generateDevices();
+            paginateDevices(devices);
+        }
+
+        document.getElementById('add-device').addEventListener('click', function() {
+            addDevice();
+        });
+
+        document.getElementById('search-device').addEventListener('click', function() {
+            const searchId = document.getElementById('search-bar').value;
+            const filteredDevices = devices.filter(device => device.id.includes(searchId));
+            displayDevices(filteredDevices);
+            displayPagination(Math.ceil(filteredDevices.length / devicesPerPage));
+        });
+
+        document.getElementById('export-devices').addEventListener('click', function() {
+            exportDevicesToCSV();
+        });
+
+        function generateDevices() {
+            for (let i = 0; i < 88; i++) {
+                const deviceType = deviceTypes[Math.floor(Math.random() * deviceTypes.length)];
+                const deviceId = deviceIds[i % deviceIds.length]; // Cycle through the given IDs
+                devices.push({ type: deviceType, id: deviceId });
+            }
+            paginateDevices(devices);
+        }
+
+        function addDevice() {
+            const deviceType = document.getElementById('device-type').value;
+            const deviceId = document.getElementById('device-id').value;
+            if (deviceId.length === 15 && !isNaN(deviceId)) {
+                const device = {
+                    type: deviceType,
+                    id: deviceId
+                };
+                devices.push(device);
+                document.getElementById('device-id').value = '';
+                paginateDevices(devices);
+            } else {
+                alert('请输入有效的15位数字编号');
+            }
+        }
+
+        function deleteDevice(button) {
+            const deviceId = button.parentElement.querySelector('span').innerText.split('_')[1];
+            devices = devices.filter(device => device.id !== deviceId);
+            paginateDevices(devices);
+        }
+
+        function paginateDevices(deviceList) {
+            const totalPages = Math.ceil(deviceList.length / devicesPerPage);
+            displayDevices(deviceList.slice((currentPage - 1) * devicesPerPage, currentPage * devicesPerPage));
+            displayPagination(totalPages);
+        }
+
+        function displayDevices(deviceList) {
+            const deviceListContainer = document.getElementById('device-list');
+            deviceListContainer.innerHTML = '';
+            deviceList.forEach(device => {
+                const deviceItem = document.createElement('div');
+                deviceItem.className = 'device-item';
+                deviceItem.innerHTML = `
+                    <span>${device.type}_${device.id}</span>
+                    <button class="delete" onclick="deleteDevice(this)">删除</button>
+                `;
+                deviceListContainer.appendChild(deviceItem);
+            });
+        }
+
+        function displayPagination(totalPages) {
+            const paginationContainer = document.getElementById('pagination');
+            paginationContainer.innerHTML = '';
+
+            const createPageButton = (pageNum) => {
+                const pageButton = document.createElement('button');
+                pageButton.innerText = pageNum;
+                pageButton.addEventListener('click', function() {
+                    currentPage = pageNum;
+                    paginateDevices(devices);
+                });
+                paginationContainer.appendChild(pageButton);
+            };
+
+            if (totalPages <= 10) {
+                for (let i = 1; i <= totalPages; i++) {
+                    createPageButton(i);
+                }
+            } else {
+                createPageButton(1);
+                if (currentPage > 5) {
+                    paginationContainer.appendChild(document.createTextNode('...'));
+                }
+                const startPage = Math.max(2, currentPage - 4);
+                const endPage = Math.min(totalPages - 1, currentPage + 4);
+
+                for (let i = startPage; i <= endPage; i++) {
+                    createPageButton(i);
+                }
+
+                if (currentPage < totalPages - 4) {
+                    paginationContainer.appendChild(document.createTextNode('...'));
+                }
+                createPageButton(totalPages);
+            }
+        }
+
+        function exportDevicesToCSV() {
+            const csvContent = 'data:text/csv;charset=utf-8,设备类型,设备编号\n' + devices.map(device => `${device.type},${device.id}`).join('\n');
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', 'devices.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>

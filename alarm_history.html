@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报警历史记录</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #14161A;
+            color: #d3d4d8;
+        }
+        .container {
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            color: #4fb3ff;
+        }
+        .search-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .search-container input {
+            padding: 10px;
+            margin-right: 10px;
+            width: 200px;
+            border: none;
+            border-radius: 5px;
+            outline: none;
+            font-size: 1em;
+            background-color: #333;
+            color: #fff;
+        }
+        .search-container button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4fb3ff;
+            color: #fff;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table, th, td {
+            border: 1px solid #333;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #1f2125;
+            color: #4fb3ff;
+        }
+        tbody tr:nth-child(odd) {
+            background-color: #1f2125;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #2a2d34;
+        }
+        tbody tr:hover {
+            background-color: #333940;
+            cursor: pointer;
+        }
+        tbody tr.unhandled {
+            background-color: #8B0000; /* Red warning */
+        }
+        tbody tr.handled {
+            background-color: #228B22; /* Green handled */
+        }
+        .pagination {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .pagination button {
+            padding: 10px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4fb3ff;
+            color: #fff;
+            cursor: pointer;
+        }
+        .pagination button.disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+        .export-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .export-container button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4fb3ff;
+            color: #fff;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal-content {
+            background-color: #14161A;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+        }
+        .modal-content h2 {
+            color: #4fb3ff;
+        }
+        .modal-content p {
+            margin: 10px 0;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .repairer-options {
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .repairer-options button {
+            padding: 10px 15px;
+            background-color: #4fb3ff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .repairer-options button.selected {
+            background-color: #007BFF;
+        }
+        .notification-options {
+            display: none;
+            justify-content: space-around;
+            margin: 10px 0;
+        }
+        .notification-options button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4fb3ff;
+            color: #fff;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        .sending-notification {
+            text-align: center;
+            margin: 10px 0;
+            color: #FFD700;
+        }
+        .notification-success {
+            text-align: center;
+            margin: 10px 0;
+            color: #228B22;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>报警历史记录</h1>
+        </div>
+        <div class="search-container">
+            <input type="text" id="search-device-id" placeholder="设备ID">
+            <input type="text" id="search-alarm-type" placeholder="报警类型">
+            <button onclick="search()">查询</button>
+        </div>
+        <table id="history-table">
+            <thead>
+                <tr>
+                    <th>报警ID</th>
+                    <th>设备ID</th>
+                    <th>报警类型</th>
+                    <th>报警时间</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="history-body">
+                <!-- Dynamic alarm history records -->
+            </tbody>
+        </table>
+        <div class="pagination" id="pagination">
+            <button id="prev-page" onclick="prevPage()">上一页</button>
+            <button id="next-page" onclick="nextPage()">下一页</button>
+        </div>
+        <div class="export-container">
+            <button onclick="exportToCSV()">导出历史记录</button>
+        </div>
+    </div>
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>设备详情</h2>
+            <p id="device-details"></p>
+            <div class="repairer-options">
+                <button onclick="selectRepairer('曹操')">曹操</button>
+                <button onclick="selectRepairer('刘备')">刘备</button>
+                <button onclick="selectRepairer('孙权')">孙权</button>
+                <button id="notify-repair" onclick="showNotificationOptions()">通知维修</button>
+            </div>
+            <div class="notification-options" id="notification-options">
+                <button onclick="sendNotification('邮件')">邮件</button>
+                <button onclick="sendNotification('短信')">短信</button>
+                <button onclick="sendNotification('微信')">微信</button>
+            </div>
+            <p class="sending-notification" id="sending-notification" style="display: none;">正在发送...</p>
+            <p class="notification-success" id="notification-success" style="display: none;">发送成功</p>
+        </div>
+    </div>
+    <script>
+        let token = '';
+        const devices = [];
+        let historyRecords = [];
+        const alarmsPerPage = 10;
+        let currentPage = 1;
+        let selectedRepairer = '';
+
+        async function loginAndFetchData() {
+            const username = "luopeng";
+            const password = "123456a";
+            const loginUrl = 'http://dfyun.tuech.cn:2023/api.info/gettoken';
+
+            try {
+                const response = await fetch(loginUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user: username,
+                        pwd: password
+                    })
+                });
+
+                const data = await response.json();
+                if (data.status === 1) {
+                    token = data.Data.token;
+                    await fetchDeviceData();
+                } else {
+                    alert(`登录失败: ${data.mess}`);
+                }
+            } catch (error) {
+                console.error('登录失败:', error);
+                alert('登录失败');
+            }
+        }
+
+        async function fetchDeviceData() {
+            const deviceInfoUrl = 'http://dfyun.tuech.cn:2023/api.info/getproinfo';
+
+            try {
+                const response = await fetch(deviceInfoUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'token': token
+                    }
+                });
+
+                const data = await response.json();
+                if (data.status === 1) {
+                    for (const project of data.Data) {
+                        for (const device of project.imei) {
+                            await fetchHistoryData(device.imei);
+                        }
+                    }
+                    filteredRecords = historyRecords;
+                    renderTable(filteredRecords);
+                    updatePaginationButtons(filteredRecords);
+                } else {
+                    console.error(`获取设备信息失败: ${data.mess}`);
+                }
+            } catch (error) {
+                console.error('获取设备信息失败:', error);
+            }
+        }
+
+        async function fetchHistoryData(imei) {
+            const historyUrl = `http://dfyun.tuech.cn:2023/api.info/getimeihistory?imei=${imei}&page=1&limit=500`;
+
+            try {
+                const response = await fetch(historyUrl, {
+                    method: 'GET',
+                    headers: {
+                        'token': token
+                    }
+                });
+
+                const data = await response.json();
+                if (data.status === 1) {
+                    const records = data.Data.imeihistory;
+
+                    for (const record of records) {
+                        const externalVoltage = parseFloat(record.imei_volt);
+                        const internalVoltage = parseFloat(record.imei_batt);
+                        const alarmTime = record.imei_updatetime;
+
+                        if (externalVoltage < 11) {
+                            historyRecords.push(createAlarm(imei, '外部电压低压预警', alarmTime, externalVoltage, internalVoltage));
+                        } else if (externalVoltage > 13.8) {
+                            historyRecords.push(createAlarm(imei, '外部电压高压预警', alarmTime, externalVoltage, internalVoltage));
+                        }
+
+                        if (internalVoltage < 4) {
+                            historyRecords.push(createAlarm(imei, '内部电压低压预警', alarmTime, externalVoltage, internalVoltage));
+                        } else if (internalVoltage > 4.2) {
+                            historyRecords.push(createAlarm(imei, '内部电压高压预警', alarmTime, externalVoltage, internalVoltage));
+                        }
+                    }
+                } else {
+                    console.error(`获取设备历史失败: ${data.mess}`);
+                }
+            } catch (error) {
+                console.error('获取设备历史失败:', error);
+            }
+        }
+
+        function createAlarm(deviceId, alarmType, alarmTime, externalVoltage, internalVoltage) {
+            return {
+                alarmId: historyRecords.length + 1,
+                deviceId,
+                alarmType,
+                alarmTime,
+                status: getStatus(),
+                externalVoltage,
+                internalVoltage
+            };
+        }
+
+        function getStatus() {
+            const statuses = ['未处理', '正在处理', '已处理'];
+            return statuses[Math.floor(Math.random() * statuses.length)];
+        }
+
+        function renderTable(recordList) {
+            const tableBody = document.getElementById('history-body');
+            tableBody.innerHTML = '';
+            const start = (currentPage - 1) * alarmsPerPage;
+            const end = start + alarmsPerPage;
+            const currentRecords = recordList.slice(start, end);
+
+            currentRecords.forEach(record => {
+                const row = document.createElement('tr');
+                row.className = record.status === '未处理' ? 'unhandled' : 'handled';
+                row.innerHTML = `
+                    <td>${record.alarmId}</td>
+                    <td>${record.deviceId}</td>
+                    <td>${record.alarmType}</td>
+                    <td>${record.alarmTime}</td>
+                    <td>${record.status}</td>
+                    <td><button onclick="viewDetails(${record.alarmId})">查看详情</button></td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function updatePaginationButtons(recordList) {
+            const totalPages = Math.ceil(recordList.length / alarmsPerPage);
+            document.getElementById('prev-page').disabled = currentPage === 1;
+            document.getElementById('next-page').disabled = currentPage === totalPages;
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderTable(filteredRecords);
+                updatePaginationButtons(filteredRecords);
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(filteredRecords.length / alarmsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderTable(filteredRecords);
+                updatePaginationButtons(filteredRecords);
+            }
+        }
+
+        let filteredRecords = [];
+
+        function search() {
+            const deviceId = document.getElementById('search-device-id').value.toLowerCase();
+            const alarmType = document.getElementById('search-alarm-type').value.toLowerCase();
+
+            filteredRecords = historyRecords.filter(record => 
+                (!deviceId || record.deviceId.toLowerCase().includes(deviceId)) &&
+                (!alarmType || record.alarmType.toLowerCase().includes(alarmType))
+            );
+
+            currentPage = 1;
+            renderTable(filteredRecords);
+            updatePaginationButtons(filteredRecords);
+        }
+
+        function viewDetails(alarmId) {
+            const record = historyRecords.find(rec => rec.alarmId === alarmId);
+            if (record) {
+                const detailMessage = `
+                    <p><strong>设备ID:</strong> ${record.deviceId}</p>
+                    <p><strong>外部电压:</strong> ${record.externalVoltage} V</p>
+                    <p><strong>内部电压:</strong> ${record.internalVoltage} V</p>
+                    <p><strong>报警类型:</strong> ${record.alarmType}</p>
+                `;
+                document.getElementById('device-details').innerHTML = detailMessage;
+                document.getElementById('detailModal').style.display = 'block';
+                selectedRepairer = ''; // Reset selected repairer
+                updateRepairerButtons();
+            }
+        }
+
+        function selectRepairer(name) {
+            selectedRepairer = name;
+            updateRepairerButtons();
+        }
+
+        function updateRepairerButtons() {
+            const buttons = document.querySelectorAll('.repairer-options button');
+            buttons.forEach(button => {
+                if (button.innerText === selectedRepairer) {
+                    button.classList.add('selected');
+                } else {
+                    button.classList.remove('selected');
+                }
+            });
+        }
+
+        function showNotificationOptions() {
+            if (selectedRepairer) {
+                document.getElementById('notification-options').style.display = 'flex';
+            } else {
+                alert('请先选择维修人员');
+            }
+        }
+
+        function sendNotification(method) {
+            if (!selectedRepairer) {
+                alert('请先选择维修人员');
+                return;
+            }
+            document.getElementById('notification-options').style.display = 'none';
+            document.getElementById('sending-notification').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('sending-notification').style.display = 'none';
+                document.getElementById('notification-success').innerText = `通过${method}发送给${selectedRepairer}成功`;
+                document.getElementById('notification-success').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('notification-success').style.display = 'none';
+                }, 3000);
+            }, 3000);
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        async function exportToCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,报警ID,设备ID,报警类型,报警时间,状态,外部电压,内部电压\n";
+            historyRecords.forEach(record => {
+                csvContent += `${record.alarmId},${record.deviceId},${record.alarmType},${record.alarmTime},${record.status},${record.externalVoltage},${record.internalVoltage}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "alarm_history.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        loginAndFetchData();
+    </script>
+</body>
+</html>

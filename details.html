@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备详情</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: url('./images/dianliu.png') no-repeat center center fixed;
+            background-size: cover;
+            color: #d3d4d8;
+        }
+        .container {
+            min-height: 100vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(40, 43, 49, 0.7);
+        }
+        .content {
+            position: relative;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            color: #4fb3ff;
+        }
+        #chart {
+            width: 100%;
+            height: 400px;
+            margin-bottom: 40px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: rgba(50, 54, 61, 0.8);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            transition: background-color 0.3s ease;
+        }
+        th {
+            background-color: rgba(40, 43, 49, 0.95);
+            color: #4fb3ff;
+            text-transform: uppercase;
+        }
+        tbody tr {
+            background-color: rgba(40, 43, 49, 0.7);
+            border-bottom: 1px solid #2a2e38;
+        }
+        tbody tr:nth-child(even) {
+            background-color: rgba(45, 48, 55, 0.7);
+        }
+        tbody tr:hover {
+            background-color: rgba(70, 73, 79, 0.8);
+        }
+        tbody td {
+            color: #19eae6;
+            border-right: 1px solid #333;
+        }
+        tbody td:last-child {
+            border-right: none;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <div class="header">
+                <h1>设备详情</h1>
+            </div>
+            <div id="chart"></div>
+            <table id="sensor-table">
+                <thead>
+                    <tr>
+                        <th>传感器名称</th>
+                        <th>实时值</th>
+                        <th>参考值</th>
+                        <th>状态</th>
+                        <th>时间</th>
+                    </tr>
+                </thead>
+                <tbody id="sensor-table-body">
+         
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        let token = '';
+        const imei = localStorage.getItem('selectedImei'); // Get selected IMEI
+
+        document.addEventListener("DOMContentLoaded", function() {
+            if (!imei) {
+                alert('未选择设备');
+                return;
+            }
+            loginAndFetchToken('luopeng', '123456a');
+        });
+
+        // 用户登录函数
+        async function loginAndFetchToken(username, password) {
+            const loginUrl = 'http://dfyun.tuech.cn:2023/api.info/gettoken';
+
+            try {
+                const response = await fetch(loginUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user: username,
+                        pwd: password
+                    })
+                });
+
+                const data = await response.json();
+                if (data.status === 1) {
+                    token = data.Data.token;
+                    fetchDeviceHistory(imei);
+                    fetchSensorData(imei);
+                } else {
+                    alert(`登录失败: ${data.mess}`);
+                }
+            } catch (error) {
+                console.error('登录失败:', error);
+                alert('登录失败');
+            }
+        }
+
+        // 获取设备历史信息
+        async function fetchDeviceHistory(imei) {
+            const historyUrl = `http://dfyun.tuech.cn:2023/api.info/getimeihistory?imei=${imei}&page=1&limit=10`;
+
+            try {
+                const response = await fetch(historyUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'token': token
+                    }
+                });
+
+                const data = await response.json();
+                if (data.status === 1) {
+                    const voltageData = data.Data.imeihistory;
+                    const labels = voltageData.map(entry => entry.imei_updatetime);
+                    const imeiVolt = voltageData.map(entry => parseFloat(entry.imei_volt));
+                    const imeiBatt = voltageData.map(entry => parseFloat(entry.imei_batt));
+                    renderVoltageChart(labels, imeiVolt, imeiBatt);
+                } else {
+                    alert(data.mess);
+                }
+            } catch (error) {
+                console.error('获取历史信息错误:', error);
+                alert('获取历史信息失败');
+            }
+        }
+
+        // 获取设备传感器信息
+        async function fetchSensorData(imei) {
+            const sensorInfoUrl = `http://dfyun.tuech.cn:2023/api.info/getimei2device?imei=${imei}`;
+
+            try {
+                const response = await fetch(sensorInfoUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'token': token
+                    }
+                });
+
+                const data = await response.json();
+                if (data.status === 1) {
+                    renderSensorTable(data.Data);
+                } else {
+                    alert(data.mess);
+                }
+            } catch (error) {
+                console.error('获取传感器信息错误:', error);
+                alert('获取传感器信息失败');
+            }
+        }
+
+        // 渲染电压图表
+        function renderVoltageChart(labels, imeiVolt, imeiBatt) {
+            const chart = echarts.init(document.getElementById('chart'));
+            chart.setOption({
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross',
+                        label: {
+                            backgroundColor: '#6a7985'
+                        }
+                    }
+                },
+                legend: {
+                    data: ['外部电压 (V)', '内部电压 (V)'],
+                    textStyle: {
+                        color: '#d3d4d8'
+                    }
+                },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: labels,
+                    axisLabel: {
+                        color: '#d3d4d8'
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: {
+                        color: '#d3d4d8'
+                    }
+                },
+                series: [
+                    {
+                        name: '外部电压 (V)',
+                        type: 'line',
+                        data: imeiVolt,
+                        smooth: true,
+                        lineStyle: {
+                            width: 2,
+                            color: '#4fb3ff'
+                        }
+                    },
+                    {
+                        name: '内部电压 (V)',
+                        type: 'line',
+                        data: imeiBatt,
+                        smooth: true,
+                        lineStyle: {
+                            width: 2,
+                            color: '#ff6384'
+                        }
+                    }
+                ]
+            });
+        }
+
+        // 渲染传感器信息表格
+        function renderSensorTable(sensorData) {
+            const tableBody = document.getElementById('sensor-table-body');
+            tableBody.innerHTML = '';
+
+            sensorData.forEach(sensor => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${sensor.sName || 'N/A'}</td>
+                    <td>${sensor.sRealTimeValue || 'N/A'}</td>
+                    <td>${sensor.sReferValue || 'N/A'}</td>
+                    <td>${sensor.sStatus || 'N/A'}</td>
+                    <td>${sensor.sTime || 'N/A'}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html>

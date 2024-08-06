@@ -1,0 +1,350 @@
+<!-- <!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>设备展示</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/layui/2.5.6/layui.css">
+    <style>
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: url('./images/6.png') no-repeat center center fixed;
+            background-size: cover;
+            color: #d3d4d8;
+        }
+        .device-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px;
+        }
+        .device-card {
+            background-color: rgba(59, 59, 59, 0.8);
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin: 10px;
+            padding: 20px;
+            width: 300px;
+            transition: transform 0.2s;
+        }
+        .device-card:hover {
+            transform: translateY(-10px);
+        }
+        .device-card h3 {
+            margin-top: 0;
+            font-size: 1.5em;
+            color: #1E9FFF;
+        }
+        .device-card p {
+            font-size: 1em;
+            line-height: 1.5;
+        }
+        .pagination {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .pagination a {
+            margin: 0 5px;
+            padding: 8px 16px;
+            color: #fff;
+            background-color: #1E9FFF;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        .pagination a:hover {
+            background-color: #007BFF;
+        }
+        .pagination a.active {
+            background-color: #0056b3;
+        }
+        .layui-input {
+            background-color: #3b3b3b;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-container">
+        <div class="layui-row">
+            <div class="layui-col-md12">
+                <h2 style="text-align:center;">设备展示</h2>
+                <div class="layui-form-item" style="text-align:center;">
+                    <input type="text" id="search-input" placeholder="搜索设备..." class="layui-input" style="width: 300px; display:inline-block;">
+                </div>
+                <div class="device-container" id="device-container">
+          
+                </div>
+                <div class="pagination" id="pagination">
+                  
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/layui/2.5.6/layui.js"></script>
+    <script>
+        let devices = [];
+        const deviceTypes = [
+            '温度传感器', '湿度传感器', '气压传感器', '风速传感器', '风向传感器',
+            '雨量传感器', '物候传感器', '光照度传感器', '辐射传感器', '可燃物温度传感器', '可燃物含水率传感器'
+        ];
+
+        for (let i = 1; i <= 330; i++) {
+            const id = String(i).padStart(5, '0');  // 生成5位数字
+            const type = deviceTypes[i % deviceTypes.length] + '_' + id;
+            devices.push({
+                id: id,
+                name: type,
+                type: type,
+                status: i % 2 === 0 ? '在线' : '离线',
+                lastComm: '2024-07-17 12:00:00'
+            });
+        }
+
+        const devicesPerPage = 20;
+        let currentPage = 1;
+
+        function renderDevices(deviceList) {
+            const container = document.getElementById('device-container');
+            container.innerHTML = '';
+            const start = (currentPage - 1) * devicesPerPage;
+            const end = start + devicesPerPage;
+            const currentDevices = deviceList.slice(start, end);
+
+            currentDevices.forEach(device => {
+                const card = document.createElement('div');
+                card.className = 'device-card';
+                card.innerHTML = `
+                    <h3>${device.name}</h3>
+                    <p>设备ID: ${device.id}</p>
+                    <p>类型: ${device.type}</p>
+                    <p>状态: ${device.status}</p>
+                    <p>最近通信: ${device.lastComm}</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderPagination(deviceList) {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+            const totalPages = Math.ceil(deviceList.length / devicesPerPage);
+
+            for (let i = 1; i <= totalPages; i++) {
+                const pageLink = document.createElement('a');
+                pageLink.href = 'javascript:void(0);';
+                pageLink.innerText = i;
+                pageLink.className = i === currentPage ? 'active' : '';
+                pageLink.onclick = () => {
+                    currentPage = i;
+                    renderDevices(deviceList);
+                    renderPagination(deviceList);
+                };
+                pagination.appendChild(pageLink);
+            }
+        }
+
+        document.getElementById('search-input').addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            const filteredDevices = devices.filter(device => 
+                device.name.toLowerCase().includes(query) || 
+                device.id.includes(query) || 
+                device.type.includes(query)
+            );
+            currentPage = 1;
+            renderDevices(filteredDevices);
+            renderPagination(filteredDevices);
+        });
+
+        renderDevices(devices);
+        renderPagination(devices);
+    </script>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备展示</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/layui/2.5.6/layui.css">
+    <style>
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: url('./images/6.png') no-repeat center center fixed;
+            background-size: cover;
+            color: #d3d4d8;
+        }
+        .device-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px;
+        }
+        .device-card {
+            background-color: rgba(59, 59, 59, 0.8);
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin: 10px;
+            padding: 20px;
+            width: 300px;
+            transition: transform 0.2s;
+        }
+        .device-card:hover {
+            transform: translateY(-10px);
+        }
+        .device-card h3 {
+            margin-top: 0;
+            font-size: 1.5em;
+            color: #1E9FFF;
+        }
+        .device-card p {
+            font-size: 1em;
+            line-height: 1.5;
+        }
+        .layui-input {
+            background-color: #3b3b3b;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-container">
+        <div class="layui-row">
+            <div class="layui-col-md12">
+                <h2 style="text-align:center;">设备展示</h2>
+                <div class="layui-form-item" style="text-align:center;">
+                    <input type="text" id="search-input" placeholder="搜索设备..." class="layui-input" style="width: 300px; display:inline-block;">
+                </div>
+                <div class="device-container" id="device-container">
+                    <!-- 动态填充设备卡片 -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/layui/2.5.6/layui.js"></script>
+    <script>
+        let token = '';
+        let devices = [];
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const username = "luopeng";
+            const password = "123456a";
+            login(username, password);
+        });
+
+        // 用户登录函数
+        function login(username, password) {
+            const loginUrl = 'http://dfyun.tuech.cn:2023/api.info/gettoken';
+
+            fetch(loginUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user: username,
+                    pwd: password
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('登录响应数据:', data);
+                if (data.status === 1) {
+                    token = data.Data.token;
+                    getProjectInfo();
+                } else {
+                    alert(data.mess);
+                }
+            })
+            .catch(error => {
+                console.error('登录错误:', error);
+                alert('登录失败');
+            });
+        }
+
+        // 获取项目信息
+        function getProjectInfo() {
+            const projectInfoUrl = 'http://dfyun.tuech.cn:2023/api.info/getproinfo';
+
+            fetch(projectInfoUrl, {
+                method: 'GET',
+                headers: {
+                    token
+                }
+            })
+            .then(response => {
+                console.log('响应状态:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP错误! 状态: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('项目信息响应数据:', data);
+                if (data.status === 1) {
+                    devices = data.Data.flatMap(project => project.imei.map(device => ({
+                        id: device.imei,
+                        name: project.pro_name,
+                        status: device.imei_status === 1 ? '在线' : '离线',
+                        iccid: device.imei_iccid,
+                        volt: device.imei_volt,
+                        batt: device.imei_batt,
+                        rssi: device.imei_rssi
+                    })));
+                    renderDevices(devices);
+                } else {
+                    alert(data.mess);
+                }
+            })
+            .catch(error => {
+                console.error('获取项目信息错误:', error);
+                alert('获取项目信息失败');
+            });
+        }
+
+        function renderDevices(deviceList) {
+            const container = document.getElementById('device-container');
+            container.innerHTML = '';
+
+            deviceList.forEach(device => {
+                const card = document.createElement('div');
+                card.className = 'device-card';
+                card.innerHTML = `
+                    <h3>${device.name}</h3>
+                    <p>设备ID: ${device.id}</p>
+                    <p>状态: ${device.status}</p>
+                    <p>ICCID: ${device.iccid}</p>
+                    <p>电压: ${device.volt} V</p>
+                    <p>电池: ${device.batt} V</p>
+                    <p>RSSI: ${device.rssi}</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        document.getElementById('search-input').addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            const filteredDevices = devices.filter(device => 
+                device.name.toLowerCase().includes(query) || 
+                device.id.includes(query) || 
+                device.status.includes(query)
+            );
+            renderDevices(filteredDevices);
+        });
+
+    </script>
+</body>
+</html>
