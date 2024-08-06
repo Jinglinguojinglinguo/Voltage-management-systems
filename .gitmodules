@@ -1,0 +1,3 @@
+[submodule "voltage-management-system"]
+	path = voltage-management-system
+	url = https://github.com/Jinglinguojinglinguo/Voltage-management-systems.git
